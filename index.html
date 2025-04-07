@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Math Equation Recognition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+            cursor: crosshair;
+        }
+        #output {
+            font-size: 2em;
+            margin-top: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1> Handwritten Recognition </h1>
+    <canvas id="canvas" width="400" height="200"></canvas>
+    <div id="output">Start Drawing</div>
+    
+    <script>
+        // Initialize the canvas and drawing context
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const output = document.getElementById('output');
+
+        // Track the drawing state
+        let drawing = false;
+        let x = 0;
+        let y = 0;
+
+        // Set up the drawing event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            [x, y] = [e.offsetX, e.offsetY];
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (drawing) {
+                const newX = e.offsetX;
+                const newY = e.offsetY;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(newX, newY);
+                ctx.stroke();
+                [x, y] = [newX, newY];
+                
+                // Call the prediction function after each stroke
+                predictDrawing();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            drawing = false;
+        });
+
+        // Load the model
+        let model;
+        async function loadModel() {
+            model = await tf.loadGraphModel('https://drive.google.com/uc?export=download&id=1E69iGc1ODeA15vZPSjhipXpO5Z07INTU', {
+                weightsManifest: [
+                    {
+                        'weights': [
+                            'https://drive.google.com/uc?export=download&id=1KO_EAHTLRJnWu7Mqej2KOHpnhW5fxArs',
+                            'https://drive.google.com/uc?export=download&id=1FCLa_1SIVNFDgsWvnNt4tCEM5eAhhp3J'
+                        ]
+                    }
+                ]
+            });
+            console.log('Model Loaded');
+        }
+
+        loadModel(); // Call the model loading function
+
+        // Prepare the canvas for the model prediction
+        async function predictDrawing() {
+            // Get the image data from the canvas
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Preprocess the image data for the model
+            const processedData = preprocessImage(data);
+
+            // Make the prediction
+            const prediction = await model.predict(processedData);
+            const predictedLabel = prediction.argMax(-1).dataSync()[0];
+
+            // Display the predicted result
+            output.textContent = `Prediction: ${predictedLabel}`;
+        }
+
+        // Preprocess image data (adjust according to your model input requirements)
+        function preprocessImage(data) {
+            // Example of converting the image data to the shape your model expects
+            const inputData = new Float32Array(canvas.width * canvas.height);
+            for (let i = 0; i < data.length; i += 4) {
+                const grayscale = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+                inputData[i / 4] = grayscale / 255.0;  // Normalize pixel values to [0, 1]
+            }
+            return tf.tensor(inputData, [1, canvas.width, canvas.height, 1]);  // Adjust shape for model
+        }
+    </script>
+</body>
+</html>
