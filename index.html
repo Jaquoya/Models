@@ -29,8 +29,7 @@
       try {
         model = await tf.loadGraphModel(modelURL);
         console.log('Model loaded successfully');
-        console.log('Input Shape:', model.inputs[0].shape); // Log the input shape to verify
-
+        console.log('Input Shape:', model.inputs[0].shape); // Check model input shape
       } catch (error) {
         console.error('Error loading model:', error);
       }
@@ -73,17 +72,12 @@
     // Recognize the drawing and make a prediction
     async function recognizeDrawing() {
       if (model) {
-        console.log('Recognizing drawing...');
+        console.log('Recognizing drawing...'); // Add this to ensure it's being triggered
         const inputTensor = await preprocessCanvas();
+        console.log('Input tensor:', inputTensor); // Log the tensor being passed to the model
         const prediction = await model.predict(inputTensor.expandDims(0)); // Add batch dimension
-
-        // Log and display prediction
-        prediction.print();
-        
-        // Optionally, show prediction in an alert or console log
-        const predictedClass = prediction.argMax(-1).dataSync()[0]; // Get the class with the highest probability
-        alert('Prediction: Class ' + predictedClass);
-        
+        console.log('Prediction:', prediction); // Log the prediction
+        prediction.print(); // This will print prediction results in the console
       } else {
         console.error('Model not loaded yet!');
       }
@@ -97,6 +91,7 @@
     // Setup the drawing functionality
     let drawing = false;
     canvas.addEventListener('mousedown', (e) => {
+      console.log('Mouse down', e.offsetX, e.offsetY); // Add this for debugging
       drawing = true;
       ctx.beginPath();
       ctx.moveTo(e.offsetX, e.offsetY);
@@ -104,14 +99,15 @@
 
     canvas.addEventListener('mousemove', (e) => {
       if (drawing) {
+        console.log('Mouse move', e.offsetX, e.offsetY); // Add this for debugging
         ctx.lineTo(e.offsetX, e.offsetY);
         ctx.stroke();
       }
     });
 
     canvas.addEventListener('mouseup', () => {
+      console.log('Mouse up');
       drawing = false;
-      console.log('Drawing stopped. Recognizing...');
       recognizeDrawing(); // Trigger recognition once drawing stops
     });
 
