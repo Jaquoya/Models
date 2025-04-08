@@ -39,7 +39,7 @@
     <canvas id="canvas"></canvas>
 
     <!-- Display Prediction -->
-    <div id="prediction">Draw a symbol</div>
+    <div id="prediction">Loading model...</div>
 
     <script>
         // URL to your model files on GitHub
@@ -53,8 +53,10 @@
             try {
                 model = await tf.loadGraphModel(modelUrl);
                 console.log('Model Loaded Successfully');
+                document.getElementById('prediction').textContent = 'Draw a symbol';
             } catch (error) {
                 console.error('Error loading model:', error);
+                document.getElementById('prediction').textContent = 'Failed to load model';
             }
         }
 
@@ -109,13 +111,20 @@
             context.stroke();
             lastX = currentX;
             lastY = currentY;
-
-            // Make prediction in real-time as drawing occurs
-            predictSymbol();
         }
 
         function stopDrawing(e) {
             drawing = false;
+            debouncePredictSymbol(); // Call prediction after drawing stops
+        }
+
+        // Debounce function to limit the number of predictions during drawing
+        let debounceTimeout;
+        function debouncePredictSymbol() {
+            if (debounceTimeout) clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                predictSymbol();
+            }, 500);  // Delay prediction to avoid lag
         }
 
         // Function to preprocess canvas image and make predictions
@@ -125,14 +134,14 @@
             const resizedImage = tf.image.resizeBilinear(image, [64, 64]);
             const tensor = resizedImage.expandDims(0).mean(-1).toFloat().div(255);
 
-            // Predict using the loaded model
+            // Ensure the model is loaded before predicting
             if (model) {
                 const predictions = await model.predict(tensor).data();
                 const predictedClass = predictions.indexOf(Math.max(...predictions));
                 const predictedClassName = classNames[predictedClass];
                 document.getElementById('prediction').textContent = `Prediction: ${predictedClassName}`;
             } else {
-                document.getElementById('prediction').textContent = 'Loading model...';
+                document.getElementById('prediction').textContent = 'Model not loaded yet';
             }
         }
 
