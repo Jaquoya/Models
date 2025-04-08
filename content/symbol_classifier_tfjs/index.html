@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Loader</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+  <h1>Model Loading Example</h1>
+  <div id="model-status"></div>
+
+  <script>
+    // Function to load the model from the raw GitHub URL
+    async function loadModel() {
+      const modelUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/content/symbol_classifier_tfjs/model.json';
+      
+      try {
+        // Load the model from the raw URL
+        const model = await tf.loadGraphModel(modelUrl);
+        
+        // If the model is successfully loaded
+        document.getElementById('model-status').innerText = 'Model loaded successfully!';
+        console.log('Model loaded successfully');
+      } catch (error) {
+        // If there is an error loading the model
+        document.getElementById('model-status').innerText = 'Error loading model!';
+        console.error('Error loading model:', error);
+      }
+    }
+
+    // Call the function to load the model
+    loadModel();
+  </script>
+</body>
+</html>
