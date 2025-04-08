@@ -110,7 +110,7 @@
         const [minX, minY, maxX, maxY] = getBoundingBox(stroke);
         const symbolCanvas = document.createElement("canvas");
         const sCtx = symbolCanvas.getContext("2d");
-        const size = 64;
+        const size = 64; // Can adjust the size based on model's input requirement
         symbolCanvas.width = size;
         symbolCanvas.height = size;
 
@@ -142,8 +142,8 @@
         const imgData = sCtx.getImageData(0, 0, size, size);
         let input = tf.browser.fromPixels(imgData, 1).toFloat().div(255).expandDims(0);
 
-        // Reshape to match expected input shape [3, 3, 1, 32]
-        input = input.reshape([1, 3, 3, 32]);
+        // Reshape to match the model's expected input (e.g., [1, 64, 64, 1] or adjust this)
+        input = input.reshape([1, 64, 64, 1]);
 
         // Make prediction
         const prediction = model.predict(input);
