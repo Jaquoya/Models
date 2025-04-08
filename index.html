@@ -46,7 +46,7 @@
 
     async function loadModel() {
       try {
-        const model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model/model.json');
+        const model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/refs/heads/main/model/model.json');
         console.log('Model loaded successfully');
         predictionDisplay.textContent = 'Draw a symbol';
       } catch (error) {
