@@ -1,153 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Handwritten Math Symbol Recognition</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            height: 100%;
-            background-color: #f0f0f0;
-        }
-
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: white;
-            cursor: crosshair;
-        }
-
-        #prediction {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 30px;
-            color: black;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handwritten Math Expression Recognition</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #fff;
+    }
+    canvas {
+      border: 1px solid black;
+    }
+    #prediction {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      color: black;
+    }
+  </style>
 </head>
 <body>
-    <!-- Full-screen canvas for drawing -->
-    <canvas id="canvas"></canvas>
+  <div id="prediction">Loading model...</div>
+  <canvas id="canvas"></canvas>
 
-    <!-- Display Prediction -->
-    <div id="prediction">Loading model...</div>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script>
+    let model;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const predictionDisplay = document.getElementById('prediction');
+    let drawing = false;
+    let strokes = [];
 
-    <script>
-        // URL to your model files on GitHub
-        const modelUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json';
+    // Set canvas size to full screen
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-        // Initialize the model variable
-        let model;
+    async function loadModel() {
+      try {
+        model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model/model.json');
+        console.log('Model loaded successfully');
+        predictionDisplay.textContent = 'Draw a symbol';
+      } catch (error) {
+        console.error('Error loading model:', error);
+        predictionDisplay.textContent = 'Failed to load model';
+      }
+    }
 
-        // Load the TensorFlow.js model from GitHub
-        async function loadModel() {
-            try {
-                model = await tf.loadGraphModel(modelUrl);
-                console.log('Model Loaded Successfully');
-                document.getElementById('prediction').textContent = 'Draw a symbol';
-            } catch (error) {
-                console.error('Error loading model:', error);
-                document.getElementById('prediction').textContent = 'Failed to load model';
-            }
-        }
+    // Draw the stroke on canvas
+    function drawStroke(stroke) {
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
+      ctx.stroke();
+    }
 
-        // Wait for the model to load
-        loadModel();
+    // Handle mouse events for drawing on canvas
+    canvas.addEventListener('mousedown', (event) => {
+      drawing = true;
+      strokes.push([{x: event.clientX, y: event.clientY}]);
+    });
 
-        // Set up canvas
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-        let drawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let width = window.innerWidth;
-        let height = window.innerHeight;
+    canvas.addEventListener('mousemove', (event) => {
+      if (drawing) {
+        const currentStroke = strokes[strokes.length - 1];
+        currentStroke.push({x: event.clientX, y: event.clientY});
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        strokes.forEach(stroke => drawStroke(stroke));
+      }
+    });
 
-        // Set canvas size to fill the entire screen
-        canvas.width = width;
-        canvas.height = height;
+    canvas.addEventListener('mouseup', () => {
+      drawing = false;
+      recognizeDrawing();
+    });
 
-        // Set drawing properties
-        context.lineWidth = 10;
-        context.lineJoin = context.lineCap = 'round';
-        context.strokeStyle = '#000000';
+    // Recognize the drawing after it stops
+    async function recognizeDrawing() {
+      if (strokes.length > 0) {
+        const canvasImage = await getCanvasImage();
+        const inputTensor = tf.browser.fromPixels(canvasImage)
+          .resizeNearestNeighbor([64, 64])
+          .mean(2) // Convert to grayscale
+          .expandDims(2)
+          .expandDims(0)
+          .toFloat();
+        
+        const prediction = await model.predict(inputTensor);
+        const predictedClass = prediction.argMax(-1).dataSync()[0];
+        predictionDisplay.textContent = `Predicted: ${predictedClass}`;
+      }
+    }
 
-        // Event listeners for drawing on canvas
-        canvas.addEventListener('touchstart', startDrawing, false);
-        canvas.addEventListener('touchmove', draw, false);
-        canvas.addEventListener('touchend', stopDrawing, false);
+    // Get the canvas image for recognition
+    function getCanvasImage() {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.putImageData(imageData, 0, 0);
+      return tempCanvas;
+    }
 
-        canvas.addEventListener('mousedown', startDrawing, false);
-        canvas.addEventListener('mousemove', draw, false);
-        canvas.addEventListener('mouseup', stopDrawing, false);
-        canvas.addEventListener('mouseleave', stopDrawing, false);
-
-        function startDrawing(e) {
-            e.preventDefault();
-            drawing = true;
-            lastX = e.touches ? e.touches[0].clientX : e.clientX;
-            lastY = e.touches ? e.touches[0].clientY : e.clientY;
-        }
-
-        function draw(e) {
-            e.preventDefault();
-            if (!drawing) return;
-
-            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-            const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            context.beginPath();
-            context.moveTo(lastX, lastY);
-            context.lineTo(currentX, currentY);
-            context.stroke();
-            lastX = currentX;
-            lastY = currentY;
-        }
-
-        function stopDrawing(e) {
-            drawing = false;
-            debouncePredictSymbol(); // Call prediction after drawing stops
-        }
-
-        // Debounce function to limit the number of predictions during drawing
-        let debounceTimeout;
-        function debouncePredictSymbol() {
-            if (debounceTimeout) clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => {
-                predictSymbol();
-            }, 500);  // Delay prediction to avoid lag
-        }
-
-        // Function to preprocess canvas image and make predictions
-        async function predictSymbol() {
-            // Convert the canvas image to a tensor
-            const image = tf.browser.fromPixels(canvas);
-            const resizedImage = tf.image.resizeBilinear(image, [64, 64]);
-            const tensor = resizedImage.expandDims(0).mean(-1).toFloat().div(255);
-
-            // Ensure the model is loaded before predicting
-            if (model) {
-                const predictions = await model.predict(tensor).data();
-                const predictedClass = predictions.indexOf(Math.max(...predictions));
-                const predictedClassName = classNames[predictedClass];
-                document.getElementById('prediction').textContent = `Prediction: ${predictedClassName}`;
-            } else {
-                document.getElementById('prediction').textContent = 'Model not loaded yet';
-            }
-        }
-
-        // List of class names, you can update this as per your model's output
-        const classNames = ['add', 'divide', 'eight', 'five', 'four', 'multiply', 'nine', 'one', 'seven', 'six', 'subtract', 'three', 'two', 'zero'];
-
-    </script>
+    // Load the model when the page loads
+    window.onload = loadModel;
+  </script>
 </body>
 </html>
