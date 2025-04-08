@@ -1,115 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Handwritten Math Expression Recognition</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <style>
-        /* Add some basic styling */
-        canvas {
-            border: 1px solid black;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handwritten Math Expression Recognition</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="canvas" width="800" height="600"></canvas>
-    <script>
-        // Initialize global variables
-        let model;
-        let timeout;
-        
-        // Function to load the model
-        async function loadModel() {
-            try {
-                model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model.json');
-                console.log('Model loaded successfully!');
-            } catch (error) {
-                console.error('Failed to load model:', error);
-            }
-        }
+  <h1>Draw a Math Expression</h1>
+  <canvas id="canvas" width="256" height="256"></canvas> <!-- Larger canvas for drawing -->
+  <br>
+  <button onclick="clearCanvas()">Clear Canvas</button>
 
-        // Load the model as soon as the page loads
-        loadModel();
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> <!-- TensorFlow.js -->
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const modelURL = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'; // Correct model URL
+    let model;
 
-        // Function to preprocess the canvas image before passing it to the model
-        function preprocessCanvasImage(canvas) {
-            const ctx = canvas.getContext('2d');
-            const width = 64;  // Set to the expected width of the model
-            const height = 64; // Set to the expected height of the model
+    // Load the model
+    async function loadModel() {
+      try {
+        model = await tf.loadGraphModel(modelURL);
+        console.log('Model loaded successfully');
+      } catch (error) {
+        console.error('Error loading model:', error);
+      }
+    }
 
-            // Resize the canvas content to match model's expected input size (64x64)
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d');
+    // Resize and preprocess the image for the model
+    async function preprocessCanvas() {
+      // Create a temporary canvas to resize the drawing
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
 
-            tempCtx.drawImage(canvas, 0, 0, width, height);
+      // Set the target size to 64x64
+      tempCanvas.width = 64;
+      tempCanvas.height = 64;
 
-            // Get the image data from the temporary canvas
-            const imageData = tempCtx.getImageData(0, 0, width, height);
-            const data = imageData.data;
+      // Draw the current canvas image to the temp canvas with resizing
+      tempCtx.drawImage(canvas, 0, 0, 64, 64);
 
-            // Convert the image data to grayscale (single channel)
-            const grayscaleData = new Float32Array(width * height);
-            let index = 0;
-            for (let i = 0; i < data.length; i += 4) {
-                // Use the average of the RGB channels to convert to grayscale
-                grayscaleData[index++] = (data[i] + data[i + 1] + data[i + 2]) / 3 / 255;
-            }
+      // Get image data from the resized canvas
+      const imageData = tempCtx.getImageData(0, 0, 64, 64);
+      const pixels = imageData.data;
 
-            // Reshape the data to match the model's input (64x64x1)
-            return tf.tensor(grayscaleData, [1, height, width, 1]);
-        }
+      // Convert to grayscale (average RGB values)
+      const grayscaleData = [];
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const gray = (r + g + b) / 3; // Averaging RGB for grayscale
+        grayscaleData.push(gray);
+      }
 
-        // Function to make predictions
-        async function recognizeDrawing() {
-            if (!model) {
-                console.error('Model not loaded yet!');
-                return;
-            }
+      // Convert to a Tensor and normalize it to [0, 1]
+      const tensor = tf.tensor(grayscaleData, [64, 64, 1], 'float32');
+      const normalizedTensor = tensor.div(tf.scalar(255)); // Normalize to [0, 1]
 
-            const canvas = document.getElementById('canvas');
-            const preprocessedImage = preprocessCanvasImage(canvas);
-            
-            try {
-                const predictions = await model.predict(preprocessedImage);
-                console.log(predictions);
-                // Handle predictions (display result, etc.)
-            } catch (error) {
-                console.error('Error making prediction:', error);
-            }
-        }
+      return normalizedTensor;
+    }
 
-        // Function to handle drawing on the canvas
-        let drawing = false;
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.addEventListener('mousedown', () => drawing = true);
-        canvas.addEventListener('mouseup', () => drawing = false);
-        canvas.addEventListener('mousemove', (event) => {
-            if (!drawing) return;
-            ctx.lineWidth = 10; // Set thickness of strokes
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = 'black';
-            ctx.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
-            
-            // Throttle the recognition to improve performance
-            if (timeout) clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                recognizeDrawing();
-            }, 200); // 200ms delay after drawing stops
-        });
+    // Recognize the drawing and make a prediction
+    async function recognizeDrawing() {
+      if (model) {
+        const inputTensor = await preprocessCanvas();
+        const prediction = await model.predict(inputTensor.expandDims(0)); // Add batch dimension
 
-        // Function to clear the canvas (you can call this as needed)
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        // Process the prediction (example: just log the result)
+        prediction.print();
+        alert('Prediction made! Check the console for output.');
+      } else {
+        console.error('Model not loaded yet!');
+      }
+    }
 
-    </script>
+    // Clear the canvas for new drawings
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Setup the drawing functionality
+    let drawing = false;
+    canvas.addEventListener('mousedown', (e) => {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX, e.offsetY);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (drawing) {
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      drawing = false;
+      recognizeDrawing(); // Trigger recognition once drawing stops
+    });
+
+    // Load the model when the page loads
+    window.onload = loadModel;
+  </script>
 </body>
 </html>
