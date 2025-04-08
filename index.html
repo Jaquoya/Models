@@ -92,7 +92,7 @@
 
     let model;
     async function loadModel() {
-      const modelUrl = 'https://github.com/Jaquoya/Models/raw/main/model.json';
+      const modelUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json';
       model = await tf.loadGraphModel(modelUrl);
       outputDiv.textContent = "Model loaded! Start drawing.";
     }
