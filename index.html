@@ -29,7 +29,7 @@
         model = await tf.loadGraphModel(modelURL);
         console.log('Model loaded successfully');
         
-        // Print the model's input shape to debug
+        // Print the model's input shape
         console.log(model.inputs[0].shape);
       } catch (error) {
         console.error('Error loading model:', error);
@@ -42,15 +42,15 @@
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
 
-      // Set the target size to 32x32
-      tempCanvas.width = 32;
-      tempCanvas.height = 32;
+      // Set the target size to 64x64
+      tempCanvas.width = 64;
+      tempCanvas.height = 64;
 
       // Draw the current canvas image to the temp canvas with resizing
-      tempCtx.drawImage(canvas, 0, 0, 32, 32);
+      tempCtx.drawImage(canvas, 0, 0, 64, 64);
 
       // Get image data from the resized canvas
-      const imageData = tempCtx.getImageData(0, 0, 32, 32);
+      const imageData = tempCtx.getImageData(0, 0, 64, 64);
       const pixels = imageData.data;
 
       // Convert to grayscale (average RGB values)
@@ -64,7 +64,7 @@
       }
 
       // Convert to a Tensor and normalize it to [0, 1]
-      const tensor = tf.tensor(grayscaleData, [32, 32, 1], 'float32');
+      const tensor = tf.tensor(grayscaleData, [64, 64, 1], 'float32');
       const normalizedTensor = tensor.div(tf.scalar(255)); // Normalize to [0, 1]
 
       return normalizedTensor;
@@ -74,7 +74,11 @@
     async function recognizeDrawing() {
       if (model) {
         const inputTensor = await preprocessCanvas();
-        const prediction = await model.predict(inputTensor.expandDims(0)); // Add batch dimension
+        
+        // Ensure the tensor has the correct shape (1, 64, 64, 1)
+        const expandedTensor = inputTensor.expandDims(0);  // Add batch dimension
+        
+        const prediction = await model.predict(expandedTensor); // Make the prediction
 
         // Process the prediction (example: just log the result)
         prediction.print();
