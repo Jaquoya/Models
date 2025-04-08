@@ -29,9 +29,8 @@
       try {
         model = await tf.loadGraphModel(modelURL);
         console.log('Model loaded successfully');
-        
-        // Print model's input shape
-        console.log('Input Shape:', model.inputs[0].shape);
+        console.log('Input Shape:', model.inputs[0].shape); // Log the input shape to verify
+
       } catch (error) {
         console.error('Error loading model:', error);
       }
@@ -74,12 +73,17 @@
     // Recognize the drawing and make a prediction
     async function recognizeDrawing() {
       if (model) {
+        console.log('Recognizing drawing...');
         const inputTensor = await preprocessCanvas();
         const prediction = await model.predict(inputTensor.expandDims(0)); // Add batch dimension
 
-        // Process the prediction (example: just log the result)
+        // Log and display prediction
         prediction.print();
-        alert('Prediction made! Check the console for output.');
+        
+        // Optionally, show prediction in an alert or console log
+        const predictedClass = prediction.argMax(-1).dataSync()[0]; // Get the class with the highest probability
+        alert('Prediction: Class ' + predictedClass);
+        
       } else {
         console.error('Model not loaded yet!');
       }
@@ -107,6 +111,7 @@
 
     canvas.addEventListener('mouseup', () => {
       drawing = false;
+      console.log('Drawing stopped. Recognizing...');
       recognizeDrawing(); // Trigger recognition once drawing stops
     });
 
