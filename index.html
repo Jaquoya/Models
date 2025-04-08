@@ -28,9 +28,9 @@
       try {
         model = await tf.loadGraphModel(modelURL);
         console.log('Model loaded successfully');
-
-        // Print the model's input shape
-        console.log('Model input shape:', model.inputs[0].shape);
+        
+        // Print the model's input shape to debug
+        console.log(model.inputs[0].shape);
       } catch (error) {
         console.error('Error loading model:', error);
       }
@@ -42,15 +42,15 @@
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
 
-      // Set the target size to 64x64
-      tempCanvas.width = 64;
-      tempCanvas.height = 64;
+      // Set the target size to 32x32
+      tempCanvas.width = 32;
+      tempCanvas.height = 32;
 
       // Draw the current canvas image to the temp canvas with resizing
-      tempCtx.drawImage(canvas, 0, 0, 64, 64);
+      tempCtx.drawImage(canvas, 0, 0, 32, 32);
 
       // Get image data from the resized canvas
-      const imageData = tempCtx.getImageData(0, 0, 64, 64);
+      const imageData = tempCtx.getImageData(0, 0, 32, 32);
       const pixels = imageData.data;
 
       // Convert to grayscale (average RGB values)
@@ -64,7 +64,7 @@
       }
 
       // Convert to a Tensor and normalize it to [0, 1]
-      const tensor = tf.tensor(grayscaleData, [64, 64, 1], 'float32');
+      const tensor = tf.tensor(grayscaleData, [32, 32, 1], 'float32');
       const normalizedTensor = tensor.div(tf.scalar(255)); // Normalize to [0, 1]
 
       return normalizedTensor;
