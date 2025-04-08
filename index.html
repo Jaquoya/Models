@@ -17,7 +17,7 @@
     async function loadModel() {
       try {
         // Replace this URL with your model's actual URL
-        model = await tf.loadLayersModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'');  
+        model = await tf.loadLayersModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model.json');  
         console.log('✅ Model loaded');
         document.getElementById('result').innerText = 'Model loaded successfully!';
       } catch (error) {
