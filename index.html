@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load Model - Handwritten Math Recognition</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+  <h1>Model Loading Test</h1>
+  <p>Check the browser's console to see if the model loads successfully.</p>
+
+  <script>
+    // Model URL (raw GitHub URL)
+    const modelUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/content/symbol_classifier_tfjs/model.json';
+
+    async function loadModel() {
+      try {
+        console.log('Loading model...');
+        const model = await tf.loadGraphModel(modelUrl);
+        console.log('Model loaded successfully:', model);
+      } catch (error) {
+        console.error('Error loading model:', error);
+      }
+    }
+
+    // Call the function to load the model
+    loadModel();
+  </script>
+</body>
+</html>
