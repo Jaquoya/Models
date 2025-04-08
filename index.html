@@ -13,7 +13,7 @@
 </head>
 <body>
   <h1>Draw a Digit (0-9)</h1>
-  <canvas id="canvas" width="256" height="256"></canvas> <!-- Canvas for drawing -->
+  <canvas id="canvas" width="256" height="256"></canvas> <!-- Larger canvas for drawing -->
   <br>
   <button onclick="recognizeDrawing()">Recognize</button>
   <p id="prediction"></p> <!-- Display prediction -->
@@ -22,7 +22,7 @@
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const modelURL = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'; // Model URL
+    const modelURL = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'; // Correct model URL
     let model;
 
     // Load the model
@@ -35,17 +35,17 @@
       }
     }
 
-    // Resize and preprocess the image for the model
+    // Resize and preprocess the image for the model (64x64)
     async function preprocessCanvas() {
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
-      tempCanvas.width = 28; // Resize to 28x28 as the model expects this size
-      tempCanvas.height = 28;
+      tempCanvas.width = 64; // Resize to 64x64 as the model expects this size
+      tempCanvas.height = 64;
 
       // Draw the current canvas image to the temp canvas with resizing
-      tempCtx.drawImage(canvas, 0, 0, 28, 28);
+      tempCtx.drawImage(canvas, 0, 0, 64, 64);
 
-      const imageData = tempCtx.getImageData(0, 0, 28, 28);
+      const imageData = tempCtx.getImageData(0, 0, 64, 64);
       const pixels = imageData.data;
 
       // Convert to grayscale and normalize
@@ -59,7 +59,7 @@
       }
 
       // Convert to Tensor
-      return tf.tensor(grayscaleData, [28, 28, 1], 'float32');
+      return tf.tensor(grayscaleData, [64, 64, 1], 'float32');
     }
 
     // Recognize the drawing and make a prediction
@@ -68,8 +68,14 @@
         const inputTensor = await preprocessCanvas();
         const prediction = await model.predict(inputTensor.expandDims(0)); // Add batch dimension
 
-        // Get the index with the highest probability (the predicted digit)
-        const predictedDigit = prediction.argMax(-1).dataSync()[0];
+        // Log the prediction output
+        console.log('Prediction Output:', prediction);
+
+        // Check if the prediction is a valid tensor and contains meaningful results
+        const predictedDigit = prediction.argMax(-1).dataSync()[0]; // Get the index with the highest probability
+        console.log('Predicted Digit:', predictedDigit);
+        
+        // Display the predicted digit
         document.getElementById('prediction').innerText = 'Predicted Digit: ' + predictedDigit;
       } else {
         console.error('Model not loaded yet!');
@@ -100,4 +106,3 @@
   </script>
 </body>
 </html>
-
