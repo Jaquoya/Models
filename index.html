@@ -1,175 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Handwritten Math Recognizer</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      font-family: sans-serif;
-      background-color: #1e1e2f;
-      color: #ffffff;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Math Symbol Recognition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            background-color: #f0f0f0;
+        }
 
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      cursor: crosshair;
-    }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            cursor: crosshair;
+        }
 
-    #output {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      padding: 10px 20px;
-      background: rgba(0, 0, 0, 0.6);
-      border-radius: 10px;
-      font-size: 24px;
-    }
-  </style>
+        #prediction {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 30px;
+            color: black;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
-  <div id="output">Draw something...</div>
+    <!-- Full-screen canvas for drawing -->
+    <canvas id="canvas"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"></script>
-  <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const outputDiv = document.getElementById("output");
+    <!-- Display Prediction -->
+    <div id="prediction">Draw a symbol</div>
 
-    let isDrawing = false;
-    let strokes = [];
-    let currentStroke = [];
+    <script>
+        // URL to your model files on GitHub
+        const modelUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json';
 
-    // Resize canvas
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
+        // Initialize the model variable
+        let model;
 
-    ctx.lineWidth = 12;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#ffffff";
-
-    canvas.addEventListener("mousedown", e => {
-      isDrawing = true;
-      currentStroke = [];
-      ctx.beginPath();
-      ctx.moveTo(e.clientX, e.clientY);
-      currentStroke.push([e.clientX, e.clientY]);
-    });
-
-    canvas.addEventListener("mousemove", e => {
-      if (!isDrawing) return;
-      ctx.lineTo(e.clientX, e.clientY);
-      ctx.stroke();
-      currentStroke.push([e.clientX, e.clientY]);
-    });
-
-    canvas.addEventListener("mouseup", () => {
-      if (isDrawing) {
-        isDrawing = false;
-        strokes.push(currentStroke);
-        detectPause();
-      }
-    });
-
-    let pauseTimer = null;
-    function detectPause() {
-      if (pauseTimer) clearTimeout(pauseTimer);
-      pauseTimer = setTimeout(async () => {
-        await recognizeSymbols();
-        strokes = [];
-      }, 1000); // 1 second pause
-    }
-
-    let model;
-    async function loadModel() {
-      const modelUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'; // Ensure this URL points to the raw model file
-      try {
-        model = await tf.loadGraphModel(modelUrl);
-        outputDiv.textContent = "Model loaded! Start drawing.";
-      } catch (error) {
-        console.error('Error loading model:', error);
-        outputDiv.textContent = "Failed to load model.";
-      }
-    }
-
-    async function recognizeSymbols() {
-      if (!model || !strokes.length) return; // Ensure model is loaded
-
-      let symbols = [];
-      for (const stroke of strokes) {
-        const [minX, minY, maxX, maxY] = getBoundingBox(stroke);
-        const symbolCanvas = document.createElement("canvas");
-        const sCtx = symbolCanvas.getContext("2d");
-        const size = 64; // Can adjust the size based on model's input requirement
-        symbolCanvas.width = size;
-        symbolCanvas.height = size;
-
-        // Clear background
-        sCtx.fillStyle = "#000";
-        sCtx.fillRect(0, 0, size, size);
-
-        // Scale and draw stroke
-        sCtx.strokeStyle = "#fff";
-        sCtx.lineWidth = 8;
-        sCtx.lineCap = "round";
-        sCtx.beginPath();
-
-        const scaleX = size / (maxX - minX);
-        const scaleY = size / (maxY - minY);
-        const scale = Math.min(scaleX, scaleY) * 0.8;
-        const offsetX = (size - (maxX - minX) * scale) / 2;
-        const offsetY = (size - (maxY - minY) * scale) / 2;
-
-        for (let i = 0; i < stroke.length; i++) {
-          const [x, y] = stroke[i];
-          const dx = (x - minX) * scale + offsetX;
-          const dy = (y - minY) * scale + offsetY;
-          if (i === 0) sCtx.moveTo(dx, dy);
-          else sCtx.lineTo(dx, dy);
+        // Load the TensorFlow.js model from GitHub
+        async function loadModel() {
+            try {
+                model = await tf.loadGraphModel(modelUrl);
+                console.log('Model Loaded Successfully');
+            } catch (error) {
+                console.error('Error loading model:', error);
+            }
         }
-        sCtx.stroke();
 
-        const imgData = sCtx.getImageData(0, 0, size, size);
-        let input = tf.browser.fromPixels(imgData, 1).toFloat().div(255).expandDims(0);
+        // Wait for the model to load
+        loadModel();
 
-        // Reshape to match the model's expected input (e.g., [1, 64, 64, 1] or adjust this)
-        input = input.reshape([1, 64, 64, 1]);
+        // Set up canvas
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let width = window.innerWidth;
+        let height = window.innerHeight;
 
-        // Make prediction
-        const prediction = model.predict(input);
-        const classId = prediction.argMax(-1).dataSync()[0];
-        const classMap = ['0', '1', '2', '3', '4', '5', '6', '+', '-', '*', '/']; // customize as needed
-        symbols.push(classMap[classId]);
-        tf.dispose([input, prediction]);
-      }
+        // Set canvas size to fill the entire screen
+        canvas.width = width;
+        canvas.height = height;
 
-      const expr = symbols.join("");
-      let result;
-      try {
-        result = eval(expr);
-      } catch {
-        result = "Invalid Expression";
-      }
-      outputDiv.textContent = `${expr} = ${result}`;
-    }
+        // Set drawing properties
+        context.lineWidth = 10;
+        context.lineJoin = context.lineCap = 'round';
+        context.strokeStyle = '#000000';
 
-    function getBoundingBox(stroke) {
-      const xs = stroke.map(p => p[0]);
-      const ys = stroke.map(p => p[1]);
-      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-    }
+        // Event listeners for drawing on canvas
+        canvas.addEventListener('touchstart', startDrawing, false);
+        canvas.addEventListener('touchmove', draw, false);
+        canvas.addEventListener('touchend', stopDrawing, false);
 
-    loadModel();
-  </script>
+        canvas.addEventListener('mousedown', startDrawing, false);
+        canvas.addEventListener('mousemove', draw, false);
+        canvas.addEventListener('mouseup', stopDrawing, false);
+        canvas.addEventListener('mouseleave', stopDrawing, false);
+
+        function startDrawing(e) {
+            e.preventDefault();
+            drawing = true;
+            lastX = e.touches ? e.touches[0].clientX : e.clientX;
+            lastY = e.touches ? e.touches[0].clientY : e.clientY;
+        }
+
+        function draw(e) {
+            e.preventDefault();
+            if (!drawing) return;
+
+            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+            const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            context.beginPath();
+            context.moveTo(lastX, lastY);
+            context.lineTo(currentX, currentY);
+            context.stroke();
+            lastX = currentX;
+            lastY = currentY;
+
+            // Make prediction in real-time as drawing occurs
+            predictSymbol();
+        }
+
+        function stopDrawing(e) {
+            drawing = false;
+        }
+
+        // Function to preprocess canvas image and make predictions
+        async function predictSymbol() {
+            // Convert the canvas image to a tensor
+            const image = tf.browser.fromPixels(canvas);
+            const resizedImage = tf.image.resizeBilinear(image, [64, 64]);
+            const tensor = resizedImage.expandDims(0).mean(-1).toFloat().div(255);
+
+            // Predict using the loaded model
+            if (model) {
+                const predictions = await model.predict(tensor).data();
+                const predictedClass = predictions.indexOf(Math.max(...predictions));
+                const predictedClassName = classNames[predictedClass];
+                document.getElementById('prediction').textContent = `Prediction: ${predictedClassName}`;
+            } else {
+                document.getElementById('prediction').textContent = 'Loading model...';
+            }
+        }
+
+        // List of class names, you can update this as per your model's output
+        const classNames = ['add', 'divide', 'eight', 'five', 'four', 'multiply', 'nine', 'one', 'seven', 'six', 'subtract', 'three', 'two', 'zero'];
+
+    </script>
 </body>
 </html>
