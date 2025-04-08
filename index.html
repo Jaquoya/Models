@@ -54,33 +54,44 @@
 
     let model;
     async function loadModel() {
-      model = await tf.loadLayersModel('https://jaquoya.github.io/Models/model.json');
-      console.log('✅ Model loaded');
+      try {
+        model = await tf.loadLayersModel('https://jaquoya.github.io/Models/model.json');
+        console.log('✅ Model loaded');
+      } catch (err) {
+        console.error('❌ Error loading model:', err);
+      }
     }
 
     async function recognize() {
-      if (!model) return alert('Model not loaded yet!');
-
-      // Resize drawing to 64x64 grayscale
-      const temp = document.createElement('canvas');
-      temp.width = 64;
-      temp.height = 64;
-      const tempCtx = temp.getContext('2d');
-      tempCtx.drawImage(canvas, 0, 0, 64, 64);
-
-      const imgData = tempCtx.getImageData(0, 0, 64, 64);
-      const input = [];
-      for (let i = 0; i < imgData.data.length; i += 4) {
-        const grayscale = (imgData.data[i] + imgData.data[i + 1] + imgData.data[i + 2]) / 3;
-        input.push(grayscale / 255); // Normalize
+      if (!model) {
+        return alert('Model not loaded yet!');
       }
 
-      const tensor = tf.tensor(input, [1, 64, 64, 1]);
-      const prediction = model.predict(tensor);
-      const result = (await prediction.argMax(1).data())[0];
-      document.getElementById('result').innerText = `Prediction: ${result}`;
+      try {
+        // Resize drawing to 64x64 grayscale
+        const temp = document.createElement('canvas');
+        temp.width = 64;
+        temp.height = 64;
+        const tempCtx = temp.getContext('2d');
+        tempCtx.drawImage(canvas, 0, 0, 64, 64);
+
+        const imgData = tempCtx.getImageData(0, 0, 64, 64);
+        const input = [];
+        for (let i = 0; i < imgData.data.length; i += 4) {
+          const grayscale = (imgData.data[i] + imgData.data[i + 1] + imgData.data[i + 2]) / 3;
+          input.push(grayscale / 255); // Normalize
+        }
+
+        const tensor = tf.tensor(input, [1, 64, 64, 1]);
+        const prediction = model.predict(tensor);
+        const result = (await prediction.argMax(1).data())[0];
+        document.getElementById('result').innerText = `Prediction: ${result}`;
+      } catch (err) {
+        console.error('❌ Error during prediction:', err);
+      }
     }
 
+    // Load the model when the page loads
     loadModel();
   </script>
 </body>
