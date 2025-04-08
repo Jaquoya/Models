@@ -1,10 +1,34 @@
-async function loadModel() {
-    try {
-        const model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model.json');
-        console.log('Model loaded successfully');
-    } catch (error) {
-        console.error('Error loading model:', error);
-    }
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Loading</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+    <h1>Model Loading Example</h1>
+    <div id="status">Loading model...</div>
+    <script>
+        // Function to load the model from GitHub
+        async function loadModel() {
+            const statusElement = document.getElementById("status");
 
-loadModel();
+            try {
+                // Load the model
+                const model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model.json');
+                statusElement.textContent = 'Model loaded successfully!';
+
+                // Optionally, log the model summary
+                model.summary();
+            } catch (error) {
+                statusElement.textContent = 'Error loading model: ' + error;
+                console.error('Error loading model:', error);
+            }
+        }
+
+        // Call the function to load the model
+        loadModel();
+    </script>
+</body>
+</html>
