@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Handwritten Math Expression Recognition</title>
+  <title>Handwritten Digit Recognition</title>
   <style>
     canvas {
       border: 1px solid black;
@@ -12,16 +12,17 @@
   </style>
 </head>
 <body>
-  <h1>Draw a Math Expression</h1>
-  <canvas id="canvas" width="256" height="256"></canvas> <!-- Larger canvas for drawing -->
+  <h1>Draw a Digit (0-9)</h1>
+  <canvas id="canvas" width="256" height="256"></canvas> <!-- Canvas for drawing -->
   <br>
-  <button onclick="clearCanvas()">Clear Canvas</button>
+  <button onclick="recognizeDrawing()">Recognize</button>
+  <p id="prediction"></p> <!-- Display prediction -->
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> <!-- TensorFlow.js -->
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const modelURL = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'; // Correct model URL
+    const modelURL = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json'; // Model URL
     let model;
 
     // Load the model
@@ -29,7 +30,6 @@
       try {
         model = await tf.loadGraphModel(modelURL);
         console.log('Model loaded successfully');
-        console.log('Input Shape:', model.inputs[0].shape); // Check model input shape
       } catch (error) {
         console.error('Error loading model:', error);
       }
@@ -37,61 +37,48 @@
 
     // Resize and preprocess the image for the model
     async function preprocessCanvas() {
-      // Create a temporary canvas to resize the drawing
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
-
-      // Set the target size to 64x64
-      tempCanvas.width = 64;
-      tempCanvas.height = 64;
+      tempCanvas.width = 28; // Resize to 28x28 as the model expects this size
+      tempCanvas.height = 28;
 
       // Draw the current canvas image to the temp canvas with resizing
-      tempCtx.drawImage(canvas, 0, 0, 64, 64);
+      tempCtx.drawImage(canvas, 0, 0, 28, 28);
 
-      // Get image data from the resized canvas
-      const imageData = tempCtx.getImageData(0, 0, 64, 64);
+      const imageData = tempCtx.getImageData(0, 0, 28, 28);
       const pixels = imageData.data;
 
-      // Convert to grayscale (average RGB values)
+      // Convert to grayscale and normalize
       const grayscaleData = [];
       for (let i = 0; i < pixels.length; i += 4) {
         const r = pixels[i];
         const g = pixels[i + 1];
         const b = pixels[i + 2];
-        const gray = (r + g + b) / 3; // Averaging RGB for grayscale
-        grayscaleData.push(gray);
+        const gray = (r + g + b) / 3; // Average RGB values for grayscale
+        grayscaleData.push(gray / 255); // Normalize to [0, 1]
       }
 
-      // Convert to a Tensor and normalize it to [0, 1]
-      const tensor = tf.tensor(grayscaleData, [64, 64, 1], 'float32');
-      const normalizedTensor = tensor.div(tf.scalar(255)); // Normalize to [0, 1]
-
-      return normalizedTensor;
+      // Convert to Tensor
+      return tf.tensor(grayscaleData, [28, 28, 1], 'float32');
     }
 
     // Recognize the drawing and make a prediction
     async function recognizeDrawing() {
       if (model) {
-        console.log('Recognizing drawing...'); // Add this to ensure it's being triggered
         const inputTensor = await preprocessCanvas();
-        console.log('Input tensor:', inputTensor); // Log the tensor being passed to the model
         const prediction = await model.predict(inputTensor.expandDims(0)); // Add batch dimension
-        console.log('Prediction:', prediction); // Log the prediction
-        prediction.print(); // This will print prediction results in the console
+
+        // Get the index with the highest probability (the predicted digit)
+        const predictedDigit = prediction.argMax(-1).dataSync()[0];
+        document.getElementById('prediction').innerText = 'Predicted Digit: ' + predictedDigit;
       } else {
         console.error('Model not loaded yet!');
       }
     }
 
-    // Clear the canvas for new drawings
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
     // Setup the drawing functionality
     let drawing = false;
     canvas.addEventListener('mousedown', (e) => {
-      console.log('Mouse down', e.offsetX, e.offsetY); // Add this for debugging
       drawing = true;
       ctx.beginPath();
       ctx.moveTo(e.offsetX, e.offsetY);
@@ -99,16 +86,13 @@
 
     canvas.addEventListener('mousemove', (e) => {
       if (drawing) {
-        console.log('Mouse move', e.offsetX, e.offsetY); // Add this for debugging
         ctx.lineTo(e.offsetX, e.offsetY);
         ctx.stroke();
       }
     });
 
     canvas.addEventListener('mouseup', () => {
-      console.log('Mouse up');
       drawing = false;
-      recognizeDrawing(); // Trigger recognition once drawing stops
     });
 
     // Load the model when the page loads
@@ -116,3 +100,4 @@
   </script>
 </body>
 </html>
+
