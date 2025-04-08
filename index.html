@@ -1,34 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Loading</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Handwritten Equation Recognition</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-</head>
-<body>
-    <h1>Model Loading Example</h1>
-    <div id="status">Loading model...</div>
-    <script>
-        // Function to load the model from GitHub
-        async function loadModel() {
-            const statusElement = document.getElementById("status");
+  </head>
+  <body>
+    <h1>Handwritten Math Expression Recognition</h1>
+    <p>Model loading...</p>
 
-            try {
-                // Load the model
-                const model = await tf.loadGraphModel('https://raw.githubusercontent.com/Jaquoya/Models/main/model.json');
-                statusElement.textContent = 'Model loaded successfully!';
+    <script type="text/javascript">
+      // Model JSON URL and binary file URLs from Google Drive
+      const modelJsonUrl = 'https://raw.githubusercontent.com/Jaquoya/Models/main/model.json';
+      const shard1Url = 'https://drive.google.com/uc?export=download&id=19t5wnv3beNXfuvZfIBfqecjDhZFDkG7k'; // Shard 1 URL
+      const shard2Url = 'https://drive.google.com/uc?export=download&id=1hWEbeEJVggLC6rtUMunjg1jiBZqFRskB'; // Shard 2 URL
 
-                // Optionally, log the model summary
-                model.summary();
-            } catch (error) {
-                statusElement.textContent = 'Error loading model: ' + error;
-                console.error('Error loading model:', error);
-            }
+      // Load the model with custom fetch function to handle binary files
+      async function loadModel() {
+        try {
+          const model = await tf.loadGraphModel(modelJsonUrl, {
+            fetchFunc: (url) => {
+              if (url.endsWith('.bin')) {
+                if (url.includes('group1-shard1of2.bin')) {
+                  return fetch(shard1Url);
+                } else if (url.includes('group1-shard2of2.bin')) {
+                  return fetch(shard2Url);
+                }
+              }
+              return fetch(url);
+            },
+          });
+
+          // Model is successfully loaded
+          document.querySelector('p').textContent = 'Model loaded successfully!';
+          console.log('Model loaded:', model);
+        } catch (error) {
+          console.error('Error loading model:', error);
+          document.querySelector('p').textContent = 'Error loading model.';
         }
+      }
 
-        // Call the function to load the model
-        loadModel();
+      // Call the function to load the model when the page loads
+      loadModel();
     </script>
-</body>
+  </body>
 </html>
