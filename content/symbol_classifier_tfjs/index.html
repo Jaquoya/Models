@@ -1,1 +1,32 @@
-<Doc
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Loading Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+    <h1>Model Loading Test</h1>
+    <p id="status">Loading model...</p>
+
+    <script>
+        async function loadModel() {
+            try {
+                // Load the model from GitHub
+                const model = await tf.loadGraphModel("https://raw.githubusercontent.com/Jaquoya/Models/main/content/symbol_classifier_tfjs/model.json");
+                
+                // Once the model is loaded, update the page
+                document.getElementById("status").textContent = "Model loaded successfully!";
+            } catch (error) {
+                // If there is an error loading the model
+                document.getElementById("status").textContent = "Failed to load the model.";
+                console.error("Error loading model:", error);
+            }
+        }
+
+        // Load the model when the page loads
+        window.onload = loadModel;
+    </script>
+</body>
+</html>
