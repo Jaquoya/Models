@@ -28,6 +28,9 @@
       try {
         model = await tf.loadGraphModel(modelURL);
         console.log('Model loaded successfully');
+
+        // Print the model's input shape
+        console.log('Model input shape:', model.inputs[0].shape);
       } catch (error) {
         console.error('Error loading model:', error);
       }
