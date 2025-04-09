@@ -9,21 +9,22 @@
 <body>
     <h1>Loading Model...</h1>
     <script>
-        async function loadModel() {
-            try {
-                // Load the model from Google Cloud Storage (using loadLayersModel)
-                const model = await tf.loadGraphModel('https://storage.googleapis.com/imrec/model.json');
+    async function loadModel() {
+        try {
+            // Use tf.loadLayersModel for models saved in the Layers format
+            const model = await tf.loadLayersModel('https://storage.googleapis.com/imrec/model.json');
 
-                // Confirm that the model loaded successfully
-                console.log("Model loaded successfully");
-                alert("Model loaded successfully!");
-            } catch (error) {
-                console.error("Error loading model:", error);
-                alert("Error loading model: " + error);
-            }
+            // Confirm that the model loaded successfully
+            console.log("Model loaded successfully");
+            alert("Model loaded successfully!");
+        } catch (error) {
+            console.error("Error loading model:", error);
+            alert("Error loading model: " + error);
         }
+    }
 
-        loadModel();
-    </script>
+    loadModel();
+</script>
+
 </body>
 </html>
