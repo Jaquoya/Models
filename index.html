@@ -12,20 +12,20 @@
     async function loadModel() {
         try {
             // Use tf.loadLayersModel for models saved in the Layers format
+            console.log("Loading model...");
             const model = await tf.loadLayersModel('https://storage.googleapis.com/imrec/model.json');
-                model.summary();
+            model.summary();  // Show model structure in the console
 
             // Confirm that the model loaded successfully
             console.log("Model loaded successfully");
             alert("Model loaded successfully!");
         } catch (error) {
             console.error("Error loading model:", error);
-            alert("Error loading model: " + error);
+            alert("Error loading model: " + error.message);  // Show detailed error message
         }
     }
 
     loadModel();
-</script>
-
+    </script>
 </body>
 </html>
