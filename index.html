@@ -11,8 +11,8 @@
     <script>
         async function loadModel() {
             try {
-                // Load the model from Google Cloud Storage
-                const model = await tf.loadGraphModel('https://storage.googleapis.com/imrec/model.json');
+                // Load the model from Google Cloud Storage (using loadLayersModel)
+                const model = await tf.loadLayersModel('https://storage.googleapis.com/imrec/model.json');
 
                 // Confirm that the model loaded successfully
                 console.log("Model loaded successfully");
