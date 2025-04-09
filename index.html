@@ -3,45 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Model Loader</title>
+  <title>Model Debugger</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 2rem; background-color: #f0f4f8; }
     #status { font-size: 1.5rem; color: #333; }
     .error { color: #cc0000; }
+    #model-info { margin-top: 20px; font-family: monospace; white-space: pre; background: #eee; padding: 10px; }
   </style>
 </head>
 <body>
-  <h1>TensorFlow.js Model Loader</h1>
-  <p id="status">Loading model...</p>
+  <h1>TensorFlow.js Model Debugger</h1>
+  <p id="status">Loading model in debug mode...</p>
   <div id="error-details" class="error"></div>
+  <div id="model-info"></div>
   
   <script>
     const MODEL_URL = 'https://storage.googleapis.com/imrec/tfjs_model/model.json';
+    const modelInfo = document.getElementById('model-info');
     
-    async function loadModel() {
+    // Function to inspect model JSON before loading
+    async function inspectModelJSON() {
       try {
-        // Disable the automatic warm-up inference
-        const model = await tf.loadLayersModel(MODEL_URL, { 
-          warmUp: false 
-        });
+        // First, just fetch the model.json file to examine its structure
+        const response = await fetch(MODEL_URL);
+        const modelJSON = await response.json();
         
-        console.log('✅ Model loaded:', model);
-        document.getElementById('status').textContent = '✅ Model loaded successfully!';
+        modelInfo.textContent += "Model JSON structure:\n";
+        modelInfo.textContent += JSON.stringify({
+          modelTopology: modelJSON.modelTopology ? "Present" : "Missing",
+          weightsManifest: modelJSON.weightsManifest ? "Present" : "Missing",
+          format: modelJSON.format || "Not specified",
+          generatedBy: modelJSON.generatedBy || "Not specified",
+          convertedBy: modelJSON.convertedBy || "Not specified"
+        }, null, 2) + "\n\n";
         
-        // Print model summary to console for debugging
-        model.summary();
-        console.log('Model input shape:', model.inputs[0].shape);
+        // Check for input layers
+        if (modelJSON.modelTopology && modelJSON.modelTopology.model_config) {
+          const layers = modelJSON.modelTopology.model_config.layers || [];
+          const inputLayers = layers.filter(layer => layer.class_name === "InputLayer");
+          
+          if (inputLayers.length > 0) {
+            modelInfo.textContent += "Input layer configuration:\n";
+            modelInfo.textContent += JSON.stringify(inputLayers, null, 2) + "\n\n";
+          }
+        }
         
-        return model;
+        return modelJSON;
       } catch (err) {
-        console.error('❌ Failed to load model:', err);
-        document.getElementById('status').textContent = '❌ Error loading model: ' + err.message;
-        document.getElementById('error-details').textContent = JSON.stringify(err, null, 2);
+        modelInfo.textContent += `Error inspecting model JSON: ${err.message}\n`;
+        return null;
       }
     }
     
-    loadModel();
+    // Try to load the model with special handling
+    async function loadModelWithDebug() {
+      try {
+        // First inspect the model.json
+        await inspectModelJSON();
+        
+        // Now try to load with various options
+        document.getElementById('status').textContent = 'Attempting to load model with warmUp disabled...';
+        modelInfo.textContent += "Attempting to load with warmUp: false\n";
+        
+        const model = await tf.loadLayersModel(MODEL_URL, { 
+          warmUp: false,
+          strict: false // Try with less strict validation
+        });
+        
+        // Successfully loaded
+        document.getElementById('status').textContent = '✅ Model loaded successfully!';
+        modelInfo.textContent += "\nMODEL LOADED SUCCESSFULLY\n\n";
+        
+        // Display model architecture information
+        modelInfo.textContent += "Model Summary:\n";
+        model.summary(null, null, x => { modelInfo.textContent += x + "\n"; });
+        
+        // Get input shape details
+        const inputShape = model.inputs[0].shape;
+        modelInfo.textContent += `\nModel Input Shape: ${JSON.stringify(inputShape)}\n`;
+        
+        return model;
+      } catch (err) {
+        // Handle load error
+        document.getElementById('status').textContent = '❌ Error loading model: ' + err.message;
+        modelInfo.textContent += `\nLoad Error: ${err.message}\n`;
+        
+        // Try to determine what shape the model expects
+        modelInfo.textContent += "\nAttempting alternative debugging...\n";
+        
+        try {
+          // Try to fetch model.json and extract expected input shape directly
+          const response = await fetch(MODEL_URL);
+          const modelJSON = await response.json();
+          
+          if (modelJSON.modelTopology && 
+              modelJSON.modelTopology.model_config && 
+              modelJSON.modelTopology.model_config.layers) {
+            
+            // Find first conv2d layer
+            const convLayer = modelJSON.modelTopology.model_config.layers.find(
+              layer => layer.class_name === "Conv2D"
+            );
+            
+            if (convLayer) {
+              modelInfo.textContent += `Found Conv2D layer - config: ${JSON.stringify(convLayer.config)}\n`;
+              
+              if (convLayer.config && convLayer.config.batch_input_shape) {
+                modelInfo.textContent += `Expected input shape: ${JSON.stringify(convLayer.config.batch_input_shape)}\n`;
+                modelInfo.textContent += "To fix this issue, you may need to re-export your model with the correct input shape\n";
+              }
+            }
+          }
+        } catch (debugErr) {
+          modelInfo.textContent += `Debug inspection failed: ${debugErr.message}\n`;
+        }
+        
+        throw err;
+      }
+    }
+    
+    // Run the debug process
+    loadModelWithDebug();
   </script>
 </body>
 </html>
+        
+       
