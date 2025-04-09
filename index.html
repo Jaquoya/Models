@@ -24,9 +24,12 @@
   <script>
     const MODEL_URL = 'https://storage.googleapis.com/imrec/tfjs_model/model.json';
 
+    let model;  // Declare model as a global variable
+
+    // Load model asynchronously
     async function loadModel() {
       try {
-        const model = await tf.loadLayersModel(MODEL_URL);
+        model = await tf.loadLayersModel(MODEL_URL);
         console.log('✅ Model loaded:', model);
         document.getElementById('status').textContent = '✅ Model loaded successfully!';
       } catch (err) {
@@ -35,7 +38,30 @@
       }
     }
 
-    loadModel();
+    // Fixing the input shape mismatch issue
+    async function predict(inputTensor) {
+      try {
+        if (!model) {
+          console.error('Model is not loaded yet.');
+          return;
+        }
+        // Ensure input tensor is of the correct shape: (batchSize, height, width, channels)
+        const input = inputTensor.expandDims(0); // Add batch dimension
+
+        // Make prediction
+        const prediction = await model.predict(input);
+        console.log('Prediction:', prediction);
+      } catch (err) {
+        console.error('Error in prediction:', err);
+      }
+    }
+
+    loadModel();  // Load the model on page load
+
+    // Example of how you can call the predict function later
+    // Uncomment this when you have input data to test
+    // const inputTensor = tf.zeros([28, 28, 1]); // Example placeholder tensor
+    // predict(inputTensor);
   </script>
 </body>
 </html>
