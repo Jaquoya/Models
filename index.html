@@ -46,12 +46,21 @@
           return;
         }
         
-        // Ensure input tensor is of the correct shape: (batchSize, height, width, channels)
+        // Log input shape for debugging
+        console.log("Input tensor shape before processing:", inputTensor.shape);
+
+        // Ensure input tensor is of the correct shape: (batch_size, height, width, channels)
         const input = inputTensor.expandDims(0);  // Add batch dimension if not present
         
-        // Check the shape of input tensor for debugging
-        console.log("Input shape after expandDims:", input.shape);
-        
+        // Log shape after expanding dims
+        console.log("Input tensor shape after expandDims:", input.shape);
+
+        // Ensure the input tensor has 4 dimensions
+        if (input.shape.length !== 4) {
+          console.error('Input tensor should have 4 dimensions, but it has', input.shape.length);
+          return;
+        }
+
         // Make prediction
         const prediction = await model.predict(input);
         console.log('Prediction:', prediction);
