@@ -3,38 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Real-Time Drawing Recognition</title>
+  <title>Model Loader</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-      background-color: #f0f4f8;
-    }
-    #status {
-      font-size: 1.5rem;
-      color: #333;
-    }
-    canvas {
-      border: 1px solid #000;
-      cursor: crosshair;
-    }
+    body { font-family: sans-serif; padding: 2rem; background-color: #f0f4f8; }
+    #status { font-size: 1.5rem; color: #333; }
   </style>
 </head>
 <body>
-  <h1>Draw a Math Expression</h1>
+  <h1>TensorFlow.js Model Loader</h1>
   <p id="status">Loading model...</p>
-  <canvas id="drawingCanvas" width="280" height="280"></canvas>
-  <p>Prediction: <span id="prediction"></span></p>
-  
+
   <script>
-    const MODEL_URL = 'https://storage.googleapis.com/imrec/tfjs_model/model.json';
-    let model;  // Model object
-    
-    // Load model
+    const MODEL_URL = 'https://your-model-url/model.json';
+
     async function loadModel() {
       try {
-        model = await tf.loadLayersModel(MODEL_URL);
+        const model = await tf.loadLayersModel(MODEL_URL);
         console.log('✅ Model loaded:', model);
         document.getElementById('status').textContent = '✅ Model loaded successfully!';
       } catch (err) {
@@ -43,82 +28,7 @@
       }
     }
 
-    // Prepare the canvas for drawing
-    const canvas = document.getElementById("drawingCanvas");
-    const ctx = canvas.getContext("2d");
-    let drawing = false;
-    
-    canvas.addEventListener("mousedown", (e) => {
-      drawing = true;
-      ctx.beginPath();
-      ctx.moveTo(e.offsetX, e.offsetY);
-    });
-
-    canvas.addEventListener("mousemove", (e) => {
-      if (drawing) {
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.stroke();
-      }
-    });
-
-    canvas.addEventListener("mouseup", () => {
-      drawing = false;
-      makePrediction();
-    });
-
-    // Clear the canvas
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      document.getElementById('prediction').textContent = '';
-    }
-
-    // Convert the canvas drawing to tensor
-    function captureDrawing() {
-      // Get image data from canvas
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let imgTensor = tf.browser.fromPixels(imageData, 1);  // Converts image data to tensor with 1 channel (grayscale)
-      
-      // Resize the tensor to match the input shape expected by the model (e.g., 28x28)
-      imgTensor = tf.image.resizeBilinear(imgTensor, [28, 28]);
-
-      // Normalize the tensor values to be between 0 and 1
-      imgTensor = imgTensor.div(255.0);
-
-      // Expand dimensions to match the input shape (batch_size, height, width, channels)
-      imgTensor = imgTensor.expandDims(0); // Add batch dimension
-
-      return imgTensor;
-    }
-
-    // Make prediction based on user drawing
-    async function makePrediction() {
-      if (!model) {
-        console.error('Model not loaded.');
-        return;
-      }
-
-      const inputTensor = captureDrawing();  // Capture the drawing and convert to tensor
-      console.log("Input tensor shape:", inputTensor.shape);
-
-      try {
-        // Predict the drawn expression
-        const prediction = await model.predict(inputTensor);
-        console.log('Prediction:', prediction);
-
-        // Process prediction (assuming it's a classification output)
-        const predictedClass = prediction.argMax(-1).dataSync()[0];
-        document.getElementById('prediction').textContent = predictedClass;
-      } catch (err) {
-        console.error('Error during prediction:', err);
-      }
-    }
-
-    loadModel();  // Load the model
-
-    // Clear canvas when needed
-    document.getElementById('clearButton').addEventListener("click", clearCanvas);
-
+    loadModel();
   </script>
-  <button id="clearButton">Clear Canvas</button>
 </body>
 </html>
