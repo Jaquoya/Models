@@ -45,9 +45,13 @@
           console.error('Model is not loaded yet.');
           return;
         }
+        
         // Ensure input tensor is of the correct shape: (batchSize, height, width, channels)
-        const input = inputTensor.expandDims(0); // Add batch dimension
-
+        const input = inputTensor.expandDims(0);  // Add batch dimension if not present
+        
+        // Check the shape of input tensor for debugging
+        console.log("Input shape after expandDims:", input.shape);
+        
         // Make prediction
         const prediction = await model.predict(input);
         console.log('Prediction:', prediction);
