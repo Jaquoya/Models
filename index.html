@@ -17,18 +17,16 @@
   <p id="status">Loading model in debug mode...</p>
   <div id="error-details" class="error"></div>
   <div id="model-info"></div>
-  
+
   <script>
     const MODEL_URL = 'https://storage.googleapis.com/imrec/tfjs_model/model.json';
     const modelInfo = document.getElementById('model-info');
-    
-    // Function to inspect model JSON before loading
+
     async function inspectModelJSON() {
       try {
-        // First, just fetch the model.json file to examine its structure
         const response = await fetch(MODEL_URL);
         const modelJSON = await response.json();
-        
+
         modelInfo.textContent += "Model JSON structure:\n";
         modelInfo.textContent += JSON.stringify({
           modelTopology: modelJSON.modelTopology ? "Present" : "Missing",
@@ -37,96 +35,82 @@
           generatedBy: modelJSON.generatedBy || "Not specified",
           convertedBy: modelJSON.convertedBy || "Not specified"
         }, null, 2) + "\n\n";
-        
-        // Check for input layers
+
         if (modelJSON.modelTopology && modelJSON.modelTopology.model_config) {
           const layers = modelJSON.modelTopology.model_config.layers || [];
           const inputLayers = layers.filter(layer => layer.class_name === "InputLayer");
-          
+
           if (inputLayers.length > 0) {
             modelInfo.textContent += "Input layer configuration:\n";
             modelInfo.textContent += JSON.stringify(inputLayers, null, 2) + "\n\n";
           }
         }
-        
+
         return modelJSON;
       } catch (err) {
         modelInfo.textContent += `Error inspecting model JSON: ${err.message}\n`;
         return null;
       }
     }
-    
-    // Try to load the model with special handling
+
     async function loadModelWithDebug() {
       try {
-        // First inspect the model.json
         await inspectModelJSON();
-        
-        // Now try to load with various options
+
         document.getElementById('status').textContent = 'Attempting to load model with warmUp disabled...';
         modelInfo.textContent += "Attempting to load with warmUp: false\n";
-        
-        const model = await tf.loadLayersModel(MODEL_URL, { 
+
+        const model = await tf.loadLayersModel(MODEL_URL, {
           warmUp: false,
-          strict: false // Try with less strict validation
+          strict: false
         });
-        
-        // Successfully loaded
+
         document.getElementById('status').textContent = '✅ Model loaded successfully!';
         modelInfo.textContent += "\nMODEL LOADED SUCCESSFULLY\n\n";
-        
-        // Display model architecture information
+
+        // Display model summary
         modelInfo.textContent += "Model Summary:\n";
         model.summary(null, null, x => { modelInfo.textContent += x + "\n"; });
-        
-        // Get input shape details
+
+        // Show input shape
         const inputShape = model.inputs[0].shape;
         modelInfo.textContent += `\nModel Input Shape: ${JSON.stringify(inputShape)}\n`;
-        
-        return model;
+
+        // ✅ Test prediction using dummy tensor
+        const dummyInput = tf.zeros([1, 64, 64, 1]); // 4D tensor
+        const output = model.predict(dummyInput);
+        output.print();
+        modelInfo.textContent += `\nPrediction test ran successfully.\n`;
+
       } catch (err) {
-        // Handle load error
         document.getElementById('status').textContent = '❌ Error loading model: ' + err.message;
         modelInfo.textContent += `\nLoad Error: ${err.message}\n`;
-        
-        // Try to determine what shape the model expects
+
         modelInfo.textContent += "\nAttempting alternative debugging...\n";
-        
         try {
-          // Try to fetch model.json and extract expected input shape directly
           const response = await fetch(MODEL_URL);
           const modelJSON = await response.json();
-          
-          if (modelJSON.modelTopology && 
-              modelJSON.modelTopology.model_config && 
-              modelJSON.modelTopology.model_config.layers) {
-            
-            // Find first conv2d layer
+
+          if (modelJSON.modelTopology && modelJSON.modelTopology.model_config && modelJSON.modelTopology.model_config.layers) {
             const convLayer = modelJSON.modelTopology.model_config.layers.find(
               layer => layer.class_name === "Conv2D"
             );
-            
-            if (convLayer) {
+
+            if (convLayer && convLayer.config && convLayer.config.batch_input_shape) {
               modelInfo.textContent += `Found Conv2D layer - config: ${JSON.stringify(convLayer.config)}\n`;
-              
-              if (convLayer.config && convLayer.config.batch_input_shape) {
-                modelInfo.textContent += `Expected input shape: ${JSON.stringify(convLayer.config.batch_input_shape)}\n`;
-                modelInfo.textContent += "To fix this issue, you may need to re-export your model with the correct input shape\n";
-              }
+              modelInfo.textContent += `Expected input shape: ${JSON.stringify(convLayer.config.batch_input_shape)}\n`;
+              modelInfo.textContent += "To fix this issue, you may need to re-export your model with the correct input shape\n";
             }
           }
         } catch (debugErr) {
           modelInfo.textContent += `Debug inspection failed: ${debugErr.message}\n`;
         }
-        
+
         throw err;
       }
     }
-    
-    // Run the debug process
+
     loadModelWithDebug();
   </script>
 </body>
 </html>
-        
-       
