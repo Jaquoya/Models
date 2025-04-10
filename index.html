@@ -82,15 +82,18 @@
     async function recognizeInput() {
         // Capture the canvas image as a tensor
         const imageTensor = tf.browser.fromPixels(canvas);
-        console.log('Original Image Tensor:', imageTensor);
+        console.log('Original Image Tensor:');
+        imageTensor.print();  // Print the tensor data to console
 
         // Resize the image to 64x64 as required by your model
         const resizedImage = tf.image.resizeBilinear(imageTensor, [64, 64]);
-        console.log('Resized Image Tensor:', resizedImage);
+        console.log('Resized Image Tensor:');
+        resizedImage.print();  // Print the tensor data to console
 
         // Normalize the image and adjust for single channel (grayscale)
         const normalizedImage = resizedImage.div(255.0).expandDims(0).mean(2).expandDims(2); // Normalize and adjust the shape
-        console.log('Normalized Image Tensor:', normalizedImage);
+        console.log('Normalized Image Tensor:');
+        normalizedImage.print();  // Print the tensor data to console
 
         // Make a prediction with the model
         const prediction = await model.predict(normalizedImage);
