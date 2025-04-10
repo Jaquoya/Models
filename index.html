@@ -85,6 +85,16 @@
         console.log('Original Image Tensor:');
         imageTensor.print();  // Print the tensor data to console
 
+        // Check the image dimensions and content
+        const imgData = imageTensor.dataSync();
+        const nonZeroPixels = imgData.filter(value => value !== 0).length;
+        console.log('Non-zero pixels:', nonZeroPixels);
+
+        if (nonZeroPixels === 0) {
+            console.log("No drawing detected.");
+            return;
+        }
+
         // Resize the image to 64x64 as required by your model
         const resizedImage = tf.image.resizeBilinear(imageTensor, [64, 64]);
         console.log('Resized Image Tensor:');
