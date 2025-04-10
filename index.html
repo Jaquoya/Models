@@ -82,22 +82,28 @@
     async function recognizeInput() {
         // Capture the canvas image as a tensor
         const imageTensor = tf.browser.fromPixels(canvas);
+        console.log('Original Image Tensor:', imageTensor);
 
         // Resize the image to 64x64 as required by your model
         const resizedImage = tf.image.resizeBilinear(imageTensor, [64, 64]);
+        console.log('Resized Image Tensor:', resizedImage);
 
-        // Normalize the image
-        const normalizedImage = resizedImage.div(255.0).expandDims(0).mean(2).expandDims(2); // Normalize and adjust for single channel (grayscale)
+        // Normalize the image and adjust for single channel (grayscale)
+        const normalizedImage = resizedImage.div(255.0).expandDims(0).mean(2).expandDims(2); // Normalize and adjust the shape
+        console.log('Normalized Image Tensor:', normalizedImage);
 
         // Make a prediction with the model
         const prediction = await model.predict(normalizedImage);
-        
+        console.log('Prediction:', prediction);
+
         // Get the predicted class (for symbol-level classifier, assuming 7 classes)
         const predictedClass = prediction.argMax(-1).dataSync()[0];
+        console.log('Predicted Class Index:', predictedClass);
 
         // Map the predicted class to its symbol (adjust this to your dataset)
-        const classNames = ['!', '(', ')', '+', ',', '-', '0']; // Example: you can adjust this based on your actual classes
+        const classNames = ['!', '(', ')', '+', ',', '-', '0']; // Adjust based on your class labels
         const predictedSymbol = classNames[predictedClass];
+        console.log('Predicted Symbol:', predictedSymbol);
 
         // Display the prediction
         document.getElementById('prediction').innerText = 'Prediction: ' + predictedSymbol;
@@ -108,7 +114,6 @@
     loadModel().then((loadedModel) => {
         model = loadedModel;
     });
-
 </script>
 </body>
 </html>
