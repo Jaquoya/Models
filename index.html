@@ -1,30 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Simple TFJS Model Loader</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Math Expression Recognition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        /* Optional styling for the canvas */
+        #canvas {
+            border: 2px solid black;
+            background-color: white;
+        }
+    </style>
 </head>
 <body>
-  <h1>Loading TensorFlow.js Model...</h1>
-  <p id="status">Please wait...</p>
 
-  <script>
-    const status = document.getElementById('status');
-    const MODEL_URL = 'https://storage.googleapis.com/imrec/tfjs_model/model.json';
+<h1>Draw a Math Expression!</h1>
 
+<!-- Canvas for drawing -->
+<canvas id="canvas" width="500" height="500"></canvas>
+
+<p id="status">Loading Model...</p>
+
+<script>
+    // Load the model from Google Cloud Storage
     async function loadModel() {
-      try {
-        const model = await tf.loadLayersModel(MODEL_URL);
-        status.textContent = "✅ Model loaded successfully!";
-        console.log("Model loaded:", model);
-      } catch (err) {
-        status.textContent = "❌ Failed to load model: " + err.message;
-        console.error(err);
-      }
+        try {
+            const model = await tf.loadGraphModel('https://storage.googleapis.com/imrec/model.json');
+            console.log('Model loaded successfully!');
+            document.getElementById('status').innerText = 'Model Loaded. You can start drawing!';
+            return model;
+        } catch (error) {
+            console.error('Error loading model:', error);
+            document.getElementById('status').innerText = 'Failed to load the model. Please try again.';
+        }
     }
 
-    loadModel();
-  </script>
+    // Initialize the canvas and drawing functionality
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    // Handle mouse events for drawing
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        lastX = e.offsetX;
+        lastY = e.offsetY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDrawing) {
+            const x = e.offsetX;
+            const y = e.offsetY;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            lastX = x;
+            lastY = y;
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        isDrawing = false;
+        // Trigger recognition after drawing stops
+        // You could call a function here to process the drawing for recognition
+    });
+
+    // Start loading the model
+    let model;
+    loadModel().then((loadedModel) => {
+        model = loadedModel;
+    });
+
+</script>
 </body>
 </html>
