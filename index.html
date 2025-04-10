@@ -11,6 +11,11 @@
             border: 2px solid black;
             background-color: white;
         }
+        #prediction {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -19,8 +24,9 @@
 
 <!-- Canvas for drawing -->
 <canvas id="canvas" width="500" height="500"></canvas>
-
 <p id="status">Loading Model...</p>
+
+<p id="prediction">Prediction: </p>
 
 <script>
     // Load the model from Google Cloud Storage
@@ -69,8 +75,33 @@
     canvas.addEventListener('mouseup', () => {
         isDrawing = false;
         // Trigger recognition after drawing stops
-        // You could call a function here to process the drawing for recognition
+        recognizeInput();
     });
+
+    // Function to capture and preprocess the drawing
+    async function recognizeInput() {
+        // Capture the canvas image as a tensor
+        const imageTensor = tf.browser.fromPixels(canvas);
+
+        // Resize the image to 64x64 as required by your model
+        const resizedImage = tf.image.resizeBilinear(imageTensor, [64, 64]);
+
+        // Normalize the image
+        const normalizedImage = resizedImage.div(255.0).expandDims(0).mean(2).expandDims(2); // Normalize and adjust for single channel (grayscale)
+
+        // Make a prediction with the model
+        const prediction = await model.predict(normalizedImage);
+        
+        // Get the predicted class (for symbol-level classifier, assuming 7 classes)
+        const predictedClass = prediction.argMax(-1).dataSync()[0];
+
+        // Map the predicted class to its symbol (adjust this to your dataset)
+        const classNames = ['!', '(', ')', '+', ',', '-', '0']; // Example: you can adjust this based on your actual classes
+        const predictedSymbol = classNames[predictedClass];
+
+        // Display the prediction
+        document.getElementById('prediction').innerText = 'Prediction: ' + predictedSymbol;
+    }
 
     // Start loading the model
     let model;
